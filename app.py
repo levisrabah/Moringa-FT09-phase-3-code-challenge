@@ -1,5 +1,5 @@
 from database.setup import create_tables
-from database.connection import get_db_session
+from database.connection import get_db_connection
 from models.article import Article
 from models.author import Author
 from models.magazine import Magazine
@@ -9,7 +9,7 @@ def main():
     create_tables()
 
     # Connect to the database
-    session = get_db_session()
+    session = get_db_connection()
 
     # Create an author
     author = Author(id=None, name="John Doe")

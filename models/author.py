@@ -4,7 +4,8 @@ class Author:
     def __init__(self, id, name):
         self._id = id
         self._name = name
-        self.insert_author()
+        if id is None:
+            self.insert_author()
 
     def insert_author(self):
         conn = get_db_connection()
@@ -26,14 +27,16 @@ class Author:
         return self._name
 
     def articles(self):
+        from models.article import Article
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('SELECT * FROM articles WHERE author_id = ?', (self._id,))
-        articles = cursor.fetchall()
+        rows = cursor.fetchall()
         conn.close()
-        return articles
+        return [Article(row['id'], row['title'], row['content'], row['author_id'], row['magazine_id']) for row in rows]
 
     def magazines(self):
+        from models.magazine import Magazine
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('''
@@ -42,6 +45,6 @@ class Author:
             JOIN articles ON magazines.id = articles.magazine_id
             WHERE articles.author_id = ?
         ''', (self._id,))
-        magazines = cursor.fetchall()
+        rows = cursor.fetchall()
         conn.close()
-        return magazines
+        return [Magazine(row['id'], row['name'], row['category']) for row in rows]

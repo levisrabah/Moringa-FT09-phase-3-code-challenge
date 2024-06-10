@@ -1,7 +1,4 @@
-import sqlite3
 from database.connection import get_db_connection
-from models.author import Author
-from models.magazine import Magazine
 
 class Article:
     def __init__(self, id, title, content, author_id, magazine_id):
@@ -15,8 +12,10 @@ class Article:
     def insert_article(self):
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('INSERT INTO articles (title, content, author_id, magazine_id) VALUES (?, ?, ?, ?)',
-                       (self._title, self._content, self._author_id, self._magazine_id))
+        cursor.execute('''
+            INSERT INTO articles (title, content, author_id, magazine_id)
+            VALUES (?, ?, ?, ?)
+        ''', (self._title, self._content, self._author_id, self._magazine_id))
         conn.commit()
         self._id = cursor.lastrowid
         conn.close()
@@ -37,5 +36,29 @@ class Article:
         return self._content
 
     @property
+    def author_id(self):
+        return self._author_id
+
+    @property
+    def magazine_id(self):
+        return self._magazine_id
+
+    @property
     def author(self):
+        from models.author import Author
         conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM authors WHERE id = ?', (self._author_id,))
+        row = cursor.fetchone()
+        conn.close()
+        return Author(row['id'], row['name'])
+
+    @property
+    def magazine(self):
+        from models.magazine import Magazine
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM magazines WHERE id = ?', (self._magazine_id,))
+        row = cursor.fetchone()
+        conn.close()
+        return Magazine(row['id'], row['name'], row['category'])

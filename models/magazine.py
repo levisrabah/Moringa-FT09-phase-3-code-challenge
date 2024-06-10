@@ -1,4 +1,3 @@
-import sqlite3
 from database.connection import get_db_connection
 
 class Magazine:
@@ -6,7 +5,8 @@ class Magazine:
         self._id = id
         self._name = name
         self._category = category
-        self.insert_magazine()
+        if id is None:
+            self.insert_magazine()
 
     def insert_magazine(self):
         conn = get_db_connection()
@@ -32,39 +32,48 @@ class Magazine:
         return self._category
 
     def articles(self):
+        from models.article import Article
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('SELECT * FROM articles WHERE magazine_id = ?', (self._id,))
-        articles = cursor.fetchall()
+        rows = cursor.fetchall()
         conn.close()
-        return articles
+        return [Article(row['id'], row['title'], row['content'], row['author_id'], row['magazine_id']) for row in rows]
 
     def contributors(self):
+        from models.author import Author
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('''SELECT DISTINCT a.* FROM authors a
-                          JOIN articles ar ON a.id = ar.author_id
-                          WHERE ar.magazine_id = ?''', (self._id,))
-        contributors = cursor.fetchall()
+        cursor.execute('''
+            SELECT DISTINCT authors.id, authors.name
+            FROM authors
+            JOIN articles ON authors.id = articles.author_id
+            WHERE articles.magazine_id = ?
+        ''', (self._id,))
+        rows = cursor.fetchall()
         conn.close()
-        return contributors
+        return [Author(row['id'], row['name']) for row in rows]
 
     def article_titles(self):
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('SELECT title FROM articles WHERE magazine_id = ?', (self._id,))
-        article_titles = [row[0] for row in cursor.fetchall()]
+        article_titles = [row['title'] for row in cursor.fetchall()]
         conn.close()
         return article_titles
 
     def contributing_authors(self):
+        from models.author import Author
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('''SELECT a.*, COUNT(ar.author_id) as article_count FROM authors a
-                          JOIN articles ar ON a.id = ar.author_id
-                          WHERE ar.magazine_id = ?
-                          GROUP BY ar.author_id
-                          HAVING COUNT(ar.author_id) > 2''', (self._id,))
-        contributing_authors = cursor.fetchall()
+        cursor.execute('''
+            SELECT authors.id, authors.name, COUNT(articles.author_id) as article_count
+            FROM authors
+            JOIN articles ON authors.id = articles.author_id
+            WHERE articles.magazine_id = ?
+            GROUP BY authors.id, authors.name
+            HAVING article_count > 2
+        ''', (self._id,))
+        rows = cursor.fetchall()
         conn.close()
-        return contributing_authors
+        return [Author(row['id'], row['name']) for row in rows]
